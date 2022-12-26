@@ -6,13 +6,10 @@ import shutil
 import json
 import threading
 from tqdm import tqdm
-import time
 
 '''
 TODO:
-
-Add multithreading
-spawn a thread after downloading a repo then tell it to count the lines
+Save the output of the program into a text file
 '''
 
 
@@ -40,9 +37,15 @@ def get_user_repo_data(username):
     return repo_url_list
 
 
-max_threads = 20
+# TTB 64 sec
+max_threads = 1
 thread_semaphore = threading.Semaphore(max_threads)
+
+
 def clone_repos(username, root_dir):
+    global max_threads
+    global thread_semaphore
+
     repos_data = get_user_repo_data(username)
 
     if len(repos_data) != 0:
@@ -79,29 +82,7 @@ def clone_repo_helper(url, repo_dir):
         # Release the semaphore when the thread is done, so that it can be used by another thread
         thread_semaphore.release()
 
-
-'''
-def clone_repos(username, root_dir):
-    repos_data = get_user_repo_data(username)
-
-    threads = []
-    thread_repos = [] #Contains the url of the repo being downloaded by the thread
-    for usr_repo in repos_data:
-        repo_dir = root_dir + format_filename(usr_repo[0])
-        t = threading.Thread(target=Repo.clone_from, args=(usr_repo[1], repo_dir))
-        threads.append(t)
-        thread_repos.append(usr_repo[1])
-        t.start()
-
-    # Wait for all threads to complete
-    threads = tqdm(threads)
-    for thread_num, t in enumerate(threads):
-        threads.set_description(thread_repos[thread_num])
-        t.join()
-'''
-
 def count_lines_in_repos(repos_dir, valid_file_extensions):
-    #valid_file_extensions = ['.c', '.cpp', '.cs', '.java', '.py', '.rb', '.js', '.php', '.swift', '.go', '.pl', '.pm', '.vb', '.f90', '.f95', '.scala', '.jl', '.rs', '.m', '.pas', '.clj', '.coffee', '.hs', '.ml', '.erl', '.elm', '.exs', '.lisp', '.rkt']
     num_lines_in_repos = 0
 
     # Iterate over every subdirectory in the main directory
@@ -112,7 +93,7 @@ def count_lines_in_repos(repos_dir, valid_file_extensions):
             for ext in valid_file_extensions:
                 if file.endswith(ext):
                     has_valid_file_ext = True
-                    #print("Valid file ext found " + file)
+                    # print("Valid file ext found " + file)
 
             # Open the file and count the number of lines
             if has_valid_file_ext:
@@ -121,7 +102,7 @@ def count_lines_in_repos(repos_dir, valid_file_extensions):
                         lines = f.readlines()
                         num_lines = len(lines)
 
-                    #print(f'Number of lines in {file}: {num_lines}')
+                    # print(f'Number of lines in {file}: {num_lines}')
                     num_lines_in_repos += num_lines
                 except DeprecationWarning:
                     print("Error with file " + file + " in " + subdir)
@@ -130,13 +111,13 @@ def count_lines_in_repos(repos_dir, valid_file_extensions):
 
 
 def main():
-
-    #Check if the valid extensions file exists, if not create it and put the default values into it
+    # Check if the valid extensions file exists, if not create it and put the default values into it
     if not os.path.exists("valid_file_exts.json"):
         default_file_extensions = ['.c', '.cpp', '.cs', '.java', '.py', '.rb', '.js', '.php', '.swift', '.go', '.pl',
-                                 '.pm',
-                                 '.vb', '.f90', '.f95', '.scala', '.jl', '.rs', '.m', '.pas', '.clj', '.coffee', '.hs',
-                                 '.ml', '.erl', '.elm', '.exs', '.lisp', '.rkt']
+                                   '.pm',
+                                   '.vb', '.f90', '.f95', '.scala', '.jl', '.rs', '.m', '.pas', '.clj', '.coffee',
+                                   '.hs',
+                                   '.ml', '.erl', '.elm', '.exs', '.lisp', '.rkt']
 
         with open("valid_file_exts.json", "w") as f:
             json.dump(default_file_extensions, f)
@@ -146,9 +127,8 @@ def main():
             valid_file_extensions = json.load(f)
             f.close()
 
-    #This is a temporary directory where the cloned repos will be stored
+    # This is a temporary directory where the cloned repos will be stored
     root_dir = os.getcwd() + "/cloned/"
-
     programRunning = True
 
     print("This program will count how many lines of code are within a GitHub user's repos")
@@ -175,7 +155,6 @@ def main():
         else:
             programRunning = False
             break
-
 
 
 if __name__ == '__main__':
